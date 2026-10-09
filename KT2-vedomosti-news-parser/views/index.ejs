@@ -1,0 +1,141 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>Ведомости.Новости</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 30px;
+            max-width: 800px;
+        }
+        .controls {
+            display: flex;
+            gap: 15px;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        label {
+            display: flex;
+            flex-direction: column;
+            font-size: 14px;
+            color: #333;
+        }
+        input, select {
+            margin-top: 5px;
+            padding: 8px;
+            font-size: 14px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+        }
+        #directLink {
+            display: none;
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #0066cc;
+            text-decoration: none;
+        }
+        #directLink:hover {
+            text-decoration: underline;
+        }
+        #newsContainer {
+            margin-top: 20px;
+            border-top: 1px solid #eee;
+            padding-top: 10px;
+        }
+        #newsContainer .back-link {
+            display: none;
+        }
+        .loading {
+            color: #666;
+            font-style: italic;
+        }
+        .error {
+            color: #c00;
+        }
+    </style>
+</head>
+<body>
+    <h1>Ведомости.Новости</h1>
+
+    <div class="controls">
+        <label>
+            Количество новостей:
+            <input type="number" id="countInput" value="10" min="1" max="50">
+        </label>
+        <label>
+            Категория:
+            <select id="categorySelect">
+                <option value="">Загрузка списка...</option>
+            </select>
+        </label>
+    </div>
+
+    <div>
+        <a id="directLink" href="#" target="_blank"></a>
+    </div>
+
+    <div id="newsContainer"></div>
+
+    <script>
+        const categorySelect = document.getElementById('categorySelect');
+        const countInput = document.getElementById('countInput');
+        const newsContainer = document.getElementById('newsContainer');
+        const directLink = document.getElementById('directLink');
+
+        fetch('/categories')
+            .then(res => res.json())
+            .then(categories => {
+                categorySelect.innerHTML = '<option value="">-- Выберите категорию --</option>';
+                categories.forEach(item => {
+                    const option = document.createElement('option');
+                    option.value = item.category;
+                    option.textContent = item.title;
+                    categorySelect.appendChild(option);
+                });
+            })
+            .catch(() => {
+                categorySelect.innerHTML = '<option value="">Ошибка загрузки категорий</option>';
+            });
+
+        function loadNews() {
+            const category = categorySelect.value;
+            const count = countInput.value;
+
+            if (!category || !count) {
+                newsContainer.innerHTML = '';
+                directLink.style.display = 'none';
+                return;
+            }
+
+            const url = `/${count}/news/for/${category}`;
+            directLink.href = url;
+            directLink.textContent = `Прямая ссылка: ${url}`;
+            directLink.style.display = 'inline-block';
+
+            newsContainer.innerHTML = '<p class="loading">Загрузка новостей...</p>';
+
+            fetch(url)
+                .then(res => {
+                    if (!res.ok) {
+                        throw new Error('Ошибка сервера');
+                    }
+                    return res.text();
+                })
+                .then(html => {
+                    newsContainer.innerHTML = html;
+                })
+                .catch(err => {
+                    newsContainer.innerHTML = `<p class="error">${err.message}</p>`;
+                });
+        }
+
+        categorySelect.addEventListener('change', loadNews);
+        countInput.addEventListener('input', () => {
+            if (categorySelect.value) {
+                loadNews();
+            }
+        });
+    </script>
+</body>
+</html>
